@@ -35,10 +35,17 @@ namespace Nez
 		/// </summary>
 		public static bool PauseOnFocusLost = true;
 
+#if DEBUG
+		/// <summary>
+		/// enables/disables debug rendering
+		/// </summary>
+		public static bool DebugRenderEnabled = true;
+#else
 		/// <summary>
 		/// enables/disables debug rendering
 		/// </summary>
 		public static bool DebugRenderEnabled = false;
+#endif
 
 		/// <summary>
 		/// global access to the graphicsDevice
@@ -197,17 +204,17 @@ namespace Nez
 		}
 
 
-		#region Passthroughs to Game
+#region Passthroughs to Game
 
 		public new static void Exit()
 		{
 			((Game) _instance).Exit();
 		}
 
-		#endregion
+#endregion
 
 
-		#region Game overides
+#region Game overides
 
 		protected override void Initialize()
 		{
@@ -328,9 +335,9 @@ namespace Nez
 			Emitter.Emit(CoreEvents.Exiting);
 		}
 
-		#endregion
+#endregion
 
-		#region Debug Injection
+#region Debug Injection
 
 		[Conditional("DEBUG")]
 		void EndDebugUpdate()
@@ -369,7 +376,7 @@ namespace Nez
 #endif
 		}
 
-		#endregion
+#endregion
 
 		/// <summary>
 		/// Called after a Scene ends, before the next Scene begins
@@ -394,7 +401,7 @@ namespace Nez
 		}
 
 
-		#region Global Managers
+#region Global Managers
 
 		/// <summary>
 		/// adds a global manager object that will have its update method called each frame before Scene.update is called
@@ -434,10 +441,10 @@ namespace Nez
 			return null;
 		}
 
-		#endregion
+#endregion
 
 
-		#region Systems access
+#region Systems access
 
 		/// <summary>
 		/// starts a coroutine. Coroutines can yeild ints/floats to delay for seconds or yeild to other calls to startCoroutine.
@@ -494,6 +501,6 @@ namespace Nez
 			return _instance._timerManager.Schedule(timeInSeconds, false, null, onTime);
 		}
 
-		#endregion
+#endregion
 	}
 }

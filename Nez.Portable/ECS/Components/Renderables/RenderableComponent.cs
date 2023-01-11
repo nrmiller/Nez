@@ -142,8 +142,8 @@ namespace Nez
 				return;
 
 			// if we have no collider draw our bounds
-			if (Entity.GetComponent<Collider>() == null)
-				batcher.DrawHollowRect(Bounds, Debug.Colors.RenderableBounds);
+			// if (Entity.GetComponent<Collider>() == null)
+			// 	batcher.DrawHollowRect(Bounds, Debug.Colors.RenderableBounds);
 
 			// draw a square for our pivot/origin
 			batcher.DrawPixel(Entity.Transform.Position + _localOffset, Debug.Colors.RenderableCenter, 4);

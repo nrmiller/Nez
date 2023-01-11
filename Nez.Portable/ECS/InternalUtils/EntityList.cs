@@ -166,6 +166,9 @@ namespace Nez
 			}
 		}
 
+		/// <summary>
+		/// Commits any pending updates to the entity list, sorts the list, and calls entity lifecycle methods along the way.
+		/// </summary>
 		public void UpdateLists()
 		{
 			// handle removals

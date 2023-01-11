@@ -19,22 +19,31 @@ namespace Nez
 		#region Logging
 
 		[DebuggerHidden]
+		static void Log(LogType type, string message)
+		{
+			switch (type)
+			{
+				case LogType.Error:
+				case LogType.Warn:
+				case LogType.Log:
+				case LogType.Info:
+				case LogType.Trace:
+					System.Diagnostics.Debug.WriteLine(type.ToString() + ": " + message);
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+
+		[DebuggerHidden]
 		static void Log(LogType type, string format, params object[] args)
 		{
 			switch (type)
 			{
 				case LogType.Error:
-					System.Diagnostics.Debug.WriteLine(type.ToString() + ": " + format, args);
-					break;
 				case LogType.Warn:
-					System.Diagnostics.Debug.WriteLine(type.ToString() + ": " + format, args);
-					break;
 				case LogType.Log:
-					System.Diagnostics.Debug.WriteLine(type.ToString() + ": " + format, args);
-					break;
 				case LogType.Info:
-					System.Diagnostics.Debug.WriteLine(type.ToString() + ": " + format, args);
-					break;
 				case LogType.Trace:
 					System.Diagnostics.Debug.WriteLine(type.ToString() + ": " + format, args);
 					break;
@@ -50,10 +59,23 @@ namespace Nez
 		}
 
 		[DebuggerHidden]
+		public static void Error(string message)
+		{
+			Log(LogType.Error, message);
+		}
+
+		[DebuggerHidden]
 		public static void ErrorIf(bool condition, string format, params object[] args)
 		{
 			if (condition)
 				Log(LogType.Error, format, args);
+		}
+
+		[DebuggerHidden]
+		public static void ErrorIf(bool condition, string message)
+		{
+			if (condition)
+				Log(LogType.Error, message);
 		}
 
 		[DebuggerHidden]
@@ -63,10 +85,23 @@ namespace Nez
 		}
 
 		[DebuggerHidden]
+		public static void Warn(string message)
+		{
+			Log(LogType.Warn, message);
+		}
+
+		[DebuggerHidden]
 		public static void WarnIf(bool condition, string format, params object[] args)
 		{
 			if (condition)
 				Log(LogType.Warn, format, args);
+		}
+
+		[DebuggerHidden]
+		public static void WarnIf(bool condition, string message)
+		{
+			if (condition)
+				Log(LogType.Warn, message);
 		}
 
 		[Conditional("DEBUG")]
@@ -81,6 +116,14 @@ namespace Nez
 		public static void Log(string format, params object[] args)
 		{
 			Log(LogType.Log, format, args);
+		}
+
+		[Conditional("DEBUG")]
+		[DebuggerHidden]
+		public static void LogIf(bool condition, string message)
+		{
+			if (condition)
+				Log(LogType.Log, message);
 		}
 
 		[Conditional("DEBUG")]
@@ -100,9 +143,23 @@ namespace Nez
 
 		[Conditional("DEBUG")]
 		[DebuggerHidden]
+		public static void Info(string message)
+		{
+			Log(LogType.Info, message);
+		}
+
+		[Conditional("DEBUG")]
+		[DebuggerHidden]
 		public static void Trace(string format, params object[] args)
 		{
 			Log(LogType.Trace, format, args);
+		}
+
+		[Conditional("DEBUG")]
+		[DebuggerHidden]
+		public static void Trace(string message)
+		{
+			Log(LogType.Trace, message);
 		}
 
 		#endregion

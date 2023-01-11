@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 
@@ -60,6 +61,8 @@ namespace Nez
 
 		public void Add(Component component)
 		{
+			if (component == null) throw new ArgumentNullException();
+
 			_componentsToAdd.Add(component);
 		}
 
@@ -150,6 +153,9 @@ namespace Nez
 
 					if (component is IUpdatable)
 						_updatableComponents.Add(component as IUpdatable);
+
+					if (component == null)
+						continue;
 
 					_components.Add(component);
 					_tempBufferList.Add(component);
