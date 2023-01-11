@@ -524,7 +524,7 @@ namespace Nez.Tiled
 
 		public static TmxGroup LoadTmxGroup(this TmxGroup group, TmxMap map, XElement xGroup, int width, int height, string tmxDirectory)
 		{
-			group.map = map;
+			group.Map = map;
 			group.Name = (string)xGroup.Attribute("name") ?? string.Empty;
 			group.Opacity = (float?)xGroup.Attribute("opacity") ?? 1.0f;
 			group.Visible = (bool?)xGroup.Attribute("visible") ?? true;

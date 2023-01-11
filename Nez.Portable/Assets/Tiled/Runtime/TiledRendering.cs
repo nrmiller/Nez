@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Nez.ECS.Components.Renderables;
 
 namespace Nez.Tiled
 {
@@ -39,13 +41,74 @@ namespace Nez.Tiled
 		public static void RenderLayer(ITmxLayer layer, Batcher batcher, Vector2 position, Vector2 scale, float layerDepth, RectangleF cameraClipBounds)
 		{
 			if (layer is TmxLayer tmxLayer && tmxLayer.Visible)
-				RenderLayer(tmxLayer, batcher, position, scale, layerDepth, cameraClipBounds);
+				RenderLayer(tmxLayer, batcher, position, scale, layerDepth, cameraClipBounds, true);
 			else if (layer is TmxImageLayer tmxImageLayer && tmxImageLayer.Visible)
 				RenderImageLayer(tmxImageLayer, batcher, position, scale, layerDepth);
 			else if (layer is TmxGroup tmxGroup && tmxGroup.Visible)
 				RenderGroup(tmxGroup, batcher, position, scale, layerDepth);
 			else if (layer is TmxObjectGroup tmxObjGroup && tmxObjGroup.Visible)
 				RenderObjectGroup(tmxObjGroup, batcher, position, scale, layerDepth);
+		}
+
+		public static List<TiledTileComponent> CreateComponentsFromTiles(TmxMap map, string layerName, Camera camera, bool layerDepthFromYCoordinate = true)
+		{
+			var layer = map.GetLayer(layerName);
+			if (layer == null) throw new ArgumentException($"Layer with name '{layerName}' does not exist.");
+
+			return CreateComponentsFromTiles(layer, camera, layerDepthFromYCoordinate);
+
+		}
+
+		public static List<TiledTileComponent> CreateComponentsFromTiles(TmxMap map, IEnumerable<string> layerNames, Camera camera, bool layerDepthFromYCoordinate = true)
+		{
+			var components = new List<TiledTileComponent>();
+
+			foreach (var layerName in layerNames)
+			{
+				var layer = map.GetLayer(layerName);
+				if (layer == null) throw new ArgumentException($"Layer with name '{layerName}' does not exist.");
+
+				components.AddRange(CreateComponentsFromTiles(layer, camera, layerDepthFromYCoordinate));
+			}
+
+			return components;
+		}
+
+		public static List<TiledTileComponent> CreateComponentsFromTiles(ITmxLayer layer, Camera camera, bool layerDepthFromYCoordinate = true)
+		{
+			if (!layer.Visible)
+				return new List<TiledTileComponent>();
+
+			if (layer is TmxLayer tmxLayer)
+				return CreateComponentsFromTiles(tmxLayer, camera, layerDepthFromYCoordinate);
+			else
+				throw new NotImplementedException("Not supported yet");
+			// else if (layer is TmxImageLayer tmxImageLayer && tmxImageLayer.Visible)
+			// 	RenderImageLayer(tmxImageLayer, batcher, position, scale, layerDepth);
+			// else if (layer is TmxGroup tmxGroup && tmxGroup.Visible)
+			// 	RenderGroup(tmxGroup, batcher, position, scale, layerDepth);
+			// else if (layer is TmxObjectGroup tmxObjGroup && tmxObjGroup.Visible)
+			// 	RenderObjectGroup(tmxObjGroup, batcher, position, scale, layerDepth);
+		}
+
+		public static List<TiledTileComponent> CreateComponentsFromTiles(TmxLayer layer, Camera camera, bool layerDepthFromYCoordinate = true)
+		{
+			var list = new List<TiledTileComponent>();
+			if (!layer.Visible)
+				return list;
+
+			// loop through and add all tiles in the layer
+			for (var y = 0; y < layer.Height; y++)
+			{
+				for (var x = 0; x < layer.Width; x++)
+				{
+					var tile = layer.GetTile(x, y);
+					if (tile == null) continue;
+					list.Add(new TiledTileComponent(layer, tile, camera, layerDepthFromYCoordinate));
+				}
+			}
+
+			return list;
 		}
 
 		/// <summary>
@@ -89,7 +152,7 @@ namespace Nez.Tiled
 		/// <param name="scale"></param>
 		/// <param name="layerDepth"></param>
 		/// <param name="cameraClipBounds"></param>
-		public static void RenderLayer(TmxLayer layer, Batcher batcher, Vector2 position, Vector2 scale, float layerDepth, RectangleF cameraClipBounds)
+		public static void RenderLayer(TmxLayer layer, Batcher batcher, Vector2 position, Vector2 scale, float layerDepth, RectangleF cameraClipBounds, bool layerDepthFromYCoordinate = false)
 		{
 			if (!layer.Visible)
 				return;
@@ -112,8 +175,18 @@ namespace Nez.Tiled
 			// loop through and draw all the non-culled tiles
 			for (var y = min.Y; y <= max.Y; y++)
 			{
+				// if (layerDepthFromYCoordinate)
+				// {
+				// 	var tileYPosWorld = y * tileHeight + position.Y + tileHeight / 2.0f; // centered on tile
+				// 	var tileYCameraSpace = (tileYPosWorld - cameraClipBounds.Top);
+				//
+				// 	layerDepth = Mathf.Clamp01(1 - tileYCameraSpace / cameraClipBounds.Height);
+				// }
+
 				for (var x = min.X; x <= max.X; x++)
 				{
+					// Debug.LogIf(x == 50 && y == 54, $"LayerDepth={layerDepth}");
+
 					var tile = layer.GetTile(x, y);
 					if (tile != null)
 						RenderTile(tile, batcher, position,
@@ -124,7 +197,7 @@ namespace Nez.Tiled
 			}
 		}
 
-		private static (Point, Point, RectangleF) GetLayerCullBounds(TmxLayer layer, Vector2 scale, RectangleF cameraClipBounds, float tileWidth, float tileHeight)
+		public static (Point, Point, RectangleF) GetLayerCullBounds(ITmxLayer layer, Vector2 scale, RectangleF cameraClipBounds, float tileWidth, float tileHeight)
 		{
 			var min = Point.Zero;
 			var max = Point.Zero;
@@ -275,9 +348,9 @@ namespace Nez.Tiled
 
 			var pos = new Vector2(tx, ty) + position;
 
-			if (tile.Tileset.Image != null)
+			if (tile.Tileset?.Image?.Texture != null)
 				batcher.Draw(tile.Tileset.Image.Texture, pos, sourceRect, color, rotation, Vector2.Zero, scale, spriteEffects, layerDepth);
-			else
+			else if (tilesetTile?.Image?.Texture != null)
 				batcher.Draw(tilesetTile.Image.Texture, pos, sourceRect, color, rotation, Vector2.Zero, scale, spriteEffects, layerDepth);
 		}
 

@@ -5,7 +5,7 @@ namespace Nez.Tiled
 {
 	public partial class TmxLayer : ITmxLayer
 	{
-		public TmxMap Map;
+		public TmxMap Map { get; set; }
 		public string Name { get; set; }
 		public float Opacity { get; set; }
 		public bool Visible { get; set; }

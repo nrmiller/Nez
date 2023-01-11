@@ -4,6 +4,7 @@ namespace Nez.Tiled
 {
 	public interface ITmxLayer : ITmxElement
 	{
+		TmxMap Map { get; }
 		float OffsetX { get; }
 		float OffsetY { get; }
 		float Opacity { get; }
