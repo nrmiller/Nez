@@ -16,6 +16,11 @@ namespace Nez
 		/// </summary>
 		public int[] LayerIndicesToRender;
 
+		/// <summary>
+		/// if null, all layers will be checked for colliders
+		/// </summary>
+		public int[] LayerIndicesToCollide;
+
 		public bool AutoUpdateTilesets = true;
 
 		public override float Width => TiledMap.Width * TiledMap.TileWidth;
@@ -24,14 +29,16 @@ namespace Nez
 		public TmxLayer CollisionLayer;
 
 		bool _shouldCreateColliders;
+		private bool _shouldAddTileSetCollisions = false;
 		Collider[] _colliders;
 
 
-		public TiledMapRenderer(TmxMap tiledMap, string collisionLayerName = null, bool shouldCreateColliders = true)
+		public TiledMapRenderer(TmxMap tiledMap, string collisionLayerName = null, bool shouldCreateColliders = true, bool shouldAddTileSetCollisions = false)
 		{
 			TiledMap = tiledMap;
 
 			_shouldCreateColliders = shouldCreateColliders;
+			_shouldAddTileSetCollisions = shouldAddTileSetCollisions;
 
 			if (collisionLayerName != null)
 				CollisionLayer = tiledMap.TileLayers[collisionLayerName];
@@ -57,6 +64,18 @@ namespace Nez
 
 			for (var i = 0; i < layerNames.Length; i++)
 				LayerIndicesToRender[i] = TiledMap.Layers.IndexOf(TiledMap.GetLayer(layerNames[i]));
+		}
+
+		/// <summary>
+		/// sets which layers should be checked for collision objects using their layer names.
+		/// </summary>
+		/// <param name="layerNames">Layer names.</param>
+		public void SetLayersToCollide(params string[] layerNames)
+		{
+			LayerIndicesToCollide = new int[layerNames.Length];
+
+			for (var i = 0; i < layerNames.Length; i++)
+				LayerIndicesToCollide[i] = TiledMap.Layers.IndexOf(TiledMap.GetLayer(layerNames[i]));
 		}
 
 
@@ -162,23 +181,107 @@ namespace Nez
 
 		public void AddColliders()
 		{
-			if (CollisionLayer == null || !_shouldCreateColliders)
-				return;
+			if (!_shouldCreateColliders)
+				return; // Adding colliders is disabled
 
-			// fetch the collision layer and its rects for collision
-			var collisionRects = CollisionLayer.GetCollisionRectangles();
+			var colliders = new List<Collider>();
 
-			// create colliders for the rects we received
-			_colliders = new Collider[collisionRects.Count];
-			for (var i = 0; i < collisionRects.Count; i++)
+			if (CollisionLayer != null)
 			{
-				var collider = new BoxCollider(collisionRects[i].X + _localOffset.X,
-					collisionRects[i].Y + _localOffset.Y, collisionRects[i].Width, collisionRects[i].Height);
-				collider.PhysicsLayer = PhysicsLayer;
-				collider.Entity = Entity;
-				_colliders[i] = collider;
+				// fetch the collision layer and its rects for collision
+				var collisionRects = CollisionLayer.GetCollisionRectangles();
 
-				Physics.AddCollider(collider);
+				// create colliders for the rects we received
+				for (var i = 0; i < collisionRects.Count; i++)
+				{
+					var collider = new BoxCollider(collisionRects[i].X + _localOffset.X,
+						collisionRects[i].Y + _localOffset.Y, collisionRects[i].Width, collisionRects[i].Height);
+					collider.PhysicsLayer = PhysicsLayer;
+					collider.Entity = Entity;
+					colliders.Add(collider);
+
+					Physics.AddCollider(collider);
+				}
+			}
+
+			if (_shouldAddTileSetCollisions)
+			{
+				if (LayerIndicesToCollide == null)
+				{
+					foreach (var layer in TiledMap.Layers)
+					{
+						if (layer is TmxLayer tmxLayer && tmxLayer.Visible)
+							AddCollidersFromLayer(tmxLayer, colliders);
+						// todo handle other layer types?
+						// else if (layer is TmxImageLayer tmxImageLayer && tmxImageLayer.Visible)
+						// 	RenderImageLayer(tmxImageLayer, batcher, position, scale, layerDepth);
+						// else if (layer is TmxGroup tmxGroup && tmxGroup.Visible)
+						// 	RenderGroup(tmxGroup, batcher, position, scale, layerDepth);
+						// else if (layer is TmxObjectGroup tmxObjGroup && tmxObjGroup.Visible)
+						// 	RenderObjectGroup(tmxObjGroup, batcher, position, scale, layerDepth);
+					}
+				}
+				else
+				{
+					foreach (int layer in LayerIndicesToCollide)
+					{
+						AddCollidersFromLayer(TiledMap.TileLayers[layer], colliders);
+					}
+				}
+			}
+
+			_colliders = colliders.ToArray();
+		}
+
+		private void AddCollidersFromLayer(TmxLayer layer, List<Collider> listToAppend)
+		{
+			foreach (var tile in layer.Tiles)
+			{
+				if (tile == null)
+					continue;
+
+				var objects = tile.TilesetTile?.ObjectGroups[0]?.Objects;
+				if (objects != null)
+				{
+					foreach (var obj in objects)
+					{
+						if (obj.ObjectType is TmxObjectType.Ellipse)
+						{
+							// Add ellipse collider
+							var collider = new CircleCollider();
+							var objOffset = new Vector2(obj.X, obj.Y);
+							
+							// tiled does not support adding ellipses, so no need to scale the circle.
+							collider.Radius = TiledMap.TileWidth / 4.0f;
+
+							collider.Entity = Entity;
+							collider.LocalOffset += new Vector2(tile.X * TiledMap.TileWidth, tile.Y * TiledMap.TileHeight) + _localOffset + objOffset;
+							collider.PhysicsLayer = PhysicsLayer;
+							listToAppend.Add(collider);
+
+							Physics.AddCollider(collider);
+						}
+						else if (obj.ObjectType is TmxObjectType.Polygon)
+						{
+							var collider = new PolygonCollider(obj.Points);
+							var objOffset = new Vector2(obj.X, obj.Y);
+							collider.Entity = Entity;
+							collider.LocalOffset += new Vector2(tile.X * TiledMap.TileWidth, tile.Y * TiledMap.TileHeight) + _localOffset + objOffset;
+							collider.PhysicsLayer = PhysicsLayer;
+							listToAppend.Add(collider);
+
+							Physics.AddCollider(collider);
+						}
+						// var collider = new BoxCollider(tile.X * TiledMap.TileWidth, tile.Y * TiledMap.TileHeight, TiledMap.TileWidth, TiledMap.TileHeight);
+						// var objOffset = new Vector2(obj.X, obj.Y);
+						// collider.Entity = Entity;
+						// collider.LocalOffset += _localOffset;
+						// collider.PhysicsLayer = PhysicsLayer;
+						// listToAppend.Add(collider);
+
+						
+					}
+				}
 			}
 		}
 
