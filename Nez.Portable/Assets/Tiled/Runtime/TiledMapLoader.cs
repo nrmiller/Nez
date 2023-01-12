@@ -17,8 +17,10 @@ namespace Nez.Tiled
 		{
 			using (var stream = TitleContainer.OpenStream(filepath))
 			{
+				var normalized = FileHelpers.NormalizeFilePathSeparators(filepath);
+
 				var xDoc = XDocument.Load(stream);
-				map.TmxDirectory = Path.GetDirectoryName(filepath);
+				map.TmxDirectory = Path.GetDirectoryName(normalized);
 				map.LoadTmxMap(xDoc);
 
 				return map;

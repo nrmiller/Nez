@@ -26,6 +26,7 @@
 
     <ItemGroup>
       	<None Remove="Content\NezDefaultBMFont.xnb" />
+      	<None Remove="Utils\FileHelpers\" />
     </ItemGroup>
 
     <ItemGroup>
@@ -38,5 +39,8 @@
 		<PackageReference Include="System.Drawing.Common" Version="5.0.2" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Utils\FileHelpers\" />
+	</ItemGroup>
 	<Import Sdk="Microsoft.NET.Sdk" Project="Sdk.targets" />
 </Project>
